@@ -1,10 +1,12 @@
 import 'package:card_buddy/view/ScanScreen.dart';
-import 'package:card_buddy/view/settings_screen.dart';
+import 'package:card_buddy/view/settings_screen.dart' as settings_screen;
+import 'package:card_buddy/view/alerts.dart';
 import 'package:flutter/material.dart';
 import 'package:barcode_widget/barcode_widget.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../model/card_model.dart';
+import '../controller/image_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,262 +18,28 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final box = Hive.box('cards');
   int? _openIndex;
+  final ImageController imageController = ImageController();
 
-  void _showAddCardDialog(BuildContext context, {String? scannedCode}) {
-    final nameController = TextEditingController();
-    final codeController = TextEditingController(text: scannedCode ?? '');
-    final nameFocusNode = FocusNode();
-    XFile? pickedImage;
-    bool isPickingImage = false;
-    void pickImage(StateSetter setState, ImageSource source) async {
-      if (isPickingImage) return;
-      isPickingImage = true;
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: source);
-      if (image != null) {
-        setState(() {
-          pickedImage = image;
-        });
-      }
-      isPickingImage = false;
-    }
-    showDialog(
+  void _showAddCardDialog(BuildContext context, {String? scannedCode}) async {
+    final result = await showCardInputDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            // Focus on name field if scannedCode is provided
-            if (scannedCode != null) {
-              Future.delayed(Duration(milliseconds: 100), () {
-                nameFocusNode.requestFocus();
-              });
-            }
-            return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              elevation: 0,
-              backgroundColor: Colors.transparent,
-              child: Container(
-                padding: EdgeInsets.all(0),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).dialogBackgroundColor,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 24,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 24.0, left: 24, right: 24, bottom: 0),
-                        child: Row(
-                          children: [
-                            Image.asset(
-                              'assets/logo.png',
-                              width: 32,
-                              height: 32,
-                            ),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Add Card',
-                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.close, color: Colors.grey[600]),
-                              onPressed: () => Navigator.pop(context),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(height: 8),
-                            pickedImage == null
-                                ? Column(
-                                    children: [
-                                      Container(
-                                        width: 90,
-                                        height: 90,
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[100],
-                                          borderRadius: BorderRadius.circular(16),
-                                          border: Border.all(color: Colors.grey[300]!, width: 1.5),
-                                        ),
-                                        child: Center(
-                                          child: Image.asset(
-                                            'assets/logo.png',
-                                            width: 40,
-                                            height: 40,
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(height: 8),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          ElevatedButton.icon(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.grey[200],
-                                              foregroundColor: Colors.black87,
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                            ),
-                                            icon: Icon(Icons.photo_library),
-                                            label: Text('Gallery'),
-                                            onPressed: isPickingImage ? null : () => pickImage(setState, ImageSource.gallery),
-                                          ),
-                                          SizedBox(width: 10),
-                                          ElevatedButton.icon(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Theme.of(context).colorScheme.primary,
-                                              foregroundColor: Colors.white,
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                            ),
-                                            icon: Icon(Icons.photo_camera),
-                                            label: Text('Camera'),
-                                            onPressed: isPickingImage ? null : () => pickImage(setState, ImageSource.camera),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  )
-                                : GestureDetector(
-                                    onTap: () async {
-                                      showModalBottomSheet(
-                                        context: context,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-                                        ),
-                                        builder: (context) {
-                                          return SafeArea(
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                ListTile(
-                                                  leading: Icon(Icons.photo_library),
-                                                  title: Text('Change from Gallery'),
-                                                  onTap: () {
-                                                    Navigator.pop(context);
-                                                    pickImage(setState, ImageSource.gallery);
-                                                  },
-                                                ),
-                                                ListTile(
-                                                  leading: Icon(Icons.photo_camera),
-                                                  title: Text('Change from Camera'),
-                                                  onTap: () {
-                                                    Navigator.pop(context);
-                                                    pickImage(setState, ImageSource.camera);
-                                                  },
-                                                ),
-                                                ListTile(
-                                                  leading: Icon(Icons.delete, color: Colors.red),
-                                                  title: Text('Remove Image', style: TextStyle(color: Colors.red)),
-                                                  onTap: () {
-                                                    setState(() {
-                                                      pickedImage = null;
-                                                    });
-                                                    Navigator.pop(context);
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                      );
-                                    },
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Image.file(
-                                        File(pickedImage!.path),
-                                        width: 90,
-                                        height: 90,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                            SizedBox(height: 18),
-                            TextField(
-                              controller: nameController,
-                              focusNode: nameFocusNode,
-                              decoration: InputDecoration(
-                                labelText: 'Card Name',
-                                prefixIcon: Icon(Icons.title),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                filled: true,
-                                fillColor: Colors.grey[100],
-                              ),
-                              autofocus: scannedCode != null,
-                            ),
-                            SizedBox(height: 16),
-                            TextField(
-                              controller: codeController,
-                              decoration: InputDecoration(
-                                labelText: 'Card Number',
-                                prefixIcon: Icon(Icons.numbers),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                filled: true,
-                                fillColor: Colors.grey[100],
-                              ),
-                              keyboardType: TextInputType.text,
-                            ),
-                            SizedBox(height: 24),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                TextButton(
-                                  child: Text('Cancel'),
-                                  onPressed: () => Navigator.pop(context),
-                                ),
-                                SizedBox(width: 8),
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    padding: EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-                                  ),
-                                  child: Text('Add'),
-                                  onPressed: () {
-                                    final name = nameController.text.trim();
-                                    final code = codeController.text.trim();
-                                    final imagePath = pickedImage?.path;
-                                    if (name.isNotEmpty && code.isNotEmpty) {
-                                      box.add({
-                                        'name': name,
-                                        'code': code,
-                                        'date': DateTime.now().toString().split(' ')[0],
-                                        'image': imagePath,
-                                      });
-                                      Navigator.pop(context);
-                                    }
-                                  },
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
+      title: 'Add Card',
+      initialName: '',
+      initialCode: scannedCode ?? '',
+      initialImage: null,
+      isPickingImage: imageController.isPickingImage,
+      pickImage: imageController.pickImage,
+      cropImage: imageController.cropImage,
     );
+    if (result != null) {
+      final card = CardModel(
+        name: result['name'],
+        code: result['code'],
+        date: DateTime.now().toString().split(' ')[0],
+        image: result['image'],
+      );
+      box.add(card.toMap());
+    }
   }
 
   @override
@@ -286,7 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
           title: Row(
             children: [
               Image.asset(
@@ -295,14 +64,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 32,
               ),
               SizedBox(width: 12),
-              Text('My Reward Cards'),
+              Text('Card Buddy', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold)),
             ],
           ),
           actions: [
             IconButton(
               icon: Icon(Icons.settings),
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsScreen(box: box)));
+                Navigator.push(context, MaterialPageRoute(builder: (_) => settings_screen.SettingsScreen(box: box)));
               },
             ),
           ],
@@ -312,7 +81,6 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (_, Box box, __) {
             if (box.isEmpty) return Center(child: Text('No cards yet.'));
             if (_openIndex != null) {
-              // Only show the open card, centered vertically
               final key = box.keyAt(_openIndex!);
               final card = box.get(key);
               return Center(
@@ -327,18 +95,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           _openIndex = null;
                         });
                       },
-                      onDelete: () {
-                        box.delete(key);
-                        setState(() {
-                          _openIndex = null;
-                        });
+                      onDelete: () async {
+                        final confirm = await showDeleteConfirmationDialog(context);
+                        if (confirm == true) {
+                          box.delete(key);
+                          setState(() {
+                            _openIndex = null;
+                          });
+                        }
                       },
                     ),
                   ),
                 ),
               );
             } else {
-              // Show all cards
               return ListView.builder(
                 itemCount: box.length,
                 itemBuilder: (_, i) {
@@ -352,11 +122,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         _openIndex = i;
                       });
                     },
-                    onDelete: () {
-                      box.delete(key);
-                      setState(() {
-                        _openIndex = null;
-                      });
+                    onDelete: () async {
+                      final confirm = await showDeleteConfirmationDialog(context);
+                      if (confirm == true) {
+                        box.delete(key);
+                        setState(() {
+                          _openIndex = null;
+                        });
+                      }
                     },
                   );
                 },
@@ -409,7 +182,7 @@ class FlippableCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final bool forceDeleteIcon;
-  final VoidCallback? onEdit; // <-- add this line
+  final VoidCallback? onEdit; 
 
   const FlippableCard({
     super.key,
@@ -418,14 +191,14 @@ class FlippableCard extends StatelessWidget {
     required this.onTap,
     required this.onDelete,
     this.forceDeleteIcon = false,
-    this.onEdit, // <-- add this line
+    this.onEdit
   });
 
   @override
   Widget build(BuildContext context) {
     final String? imagePath = card['image'];
-    Widget? cardImageWidget;
-    Widget? cardImageWideWidget;
+    Widget cardImageWidget;
+    Widget cardImageWideWidget;
     if (imagePath != null && imagePath.isNotEmpty && File(imagePath).existsSync()) {
       cardImageWidget = ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -433,7 +206,7 @@ class FlippableCard extends StatelessWidget {
           File(imagePath),
           width: 80,
           height: 80,
-          fit: BoxFit.cover,
+          fit: BoxFit.fill,
         ),
       );
       cardImageWideWidget = ClipRRect(
@@ -445,7 +218,42 @@ class FlippableCard extends StatelessWidget {
           fit: BoxFit.cover,
         ),
       );
+    } else {
+      // Placeholder if no image
+      cardImageWidget = Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!, width: 1.5),
+        ),
+        child: Center(
+          child: Image.asset(
+            'assets/logo.png',
+            width: 40,
+            height: 40,
+          ),
+        ),
+      );
+      cardImageWideWidget = Container(
+        width: double.infinity,
+        height: 160,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[300]!, width: 1.5),
+        ),
+        child: Center(
+          child: Image.asset(
+            'assets/logo.png',
+            width: 60,
+            height: 60,
+          ),
+        ),
+      );
     }
+    // Define gradient and shadow for the card
     final gradient = LinearGradient(
       colors: [
         Colors.grey.shade300,
@@ -456,10 +264,11 @@ class FlippableCard extends StatelessWidget {
     );
     final borderShadow = [
       BoxShadow(
-        color: Colors.grey.withOpacity(0.25),
-        blurRadius: 16,
+        //color: Colors.grey.withOpacity(0.25),
+        color: Colors.grey.withValues(blue: 0.1),
+        blurRadius: 6,
         spreadRadius: 2,
-        offset: Offset(0, 4),
+        offset: Offset(4, 1),
       ),
     ];
     if (isFlipped) {
@@ -520,11 +329,10 @@ class FlippableCard extends StatelessWidget {
                 ),
                 SizedBox(height: 12),
                 Text('Saved on: ${card['date']}', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                if (cardImageWideWidget != null) ...[
+               
                   SizedBox(height: 18),
                   cardImageWideWidget,
-                ],
-                SizedBox(height: 18),
+                               SizedBox(height: 18),
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -581,22 +389,21 @@ class FlippableCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Row(
                 children: [
-                  if (cardImageWidget != null) ...[
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.10),
-                            blurRadius: 10,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: cardImageWidget,
+                  // Always show the image widget (either real or placeholder)
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.10),
+                          blurRadius: 10,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 24),
-                  ],
+                    child: cardImageWidget,
+                  ),
+                  SizedBox(width: 24),
                   Expanded(
                     child: Text(
                       card['name'] ?? '',
@@ -613,7 +420,6 @@ class FlippableCard extends StatelessWidget {
     }
   }
 }
-
 
 class RotationYTransition extends AnimatedWidget {
   final Widget child;
