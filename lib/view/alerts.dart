@@ -21,7 +21,9 @@ Future<bool?> showDeleteConfirmationDialog(BuildContext context) {
     ),
   );
 }
-
+void showErrorMessage(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+}
 /// Shows a dialog for adding or editing a card.
 /// Returns a map with 'name', 'code', and 'image' (String path) if saved, or null if cancelled.
 Future<Map<String, dynamic>?> showCardInputDialog({
@@ -54,7 +56,7 @@ Future<Map<String, dynamic>?> showCardInputDialog({
             ),
             child: Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).dialogBackgroundColor,
+                color: Colors.white,//background color for the add/edit card dialog
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 boxShadow: [
                   BoxShadow(
@@ -105,7 +107,7 @@ Future<Map<String, dynamic>?> showCardInputDialog({
                                         width: 90,
                                         height: 90,
                                         decoration: BoxDecoration(
-                                          color: Colors.grey[100],
+                                          color: Colors.white,//add card dialog card logo background color
                                           borderRadius: BorderRadius.circular(16),
                                           border: Border.all(color: Colors.grey[300]!, width: 1.5),
                                         ),
@@ -226,7 +228,7 @@ Future<Map<String, dynamic>?> showCardInputDialog({
                             TextField(
                               controller: nameController,
                               decoration: InputDecoration(
-                                labelText: 'Card Name',
+                                labelText: '*Enter Card Name',
                                 prefixIcon: Icon(Icons.title),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                 filled: true,
@@ -237,7 +239,7 @@ Future<Map<String, dynamic>?> showCardInputDialog({
                             TextField(
                               controller: codeController,
                               decoration: InputDecoration(
-                                labelText: 'Card Number',
+                                labelText: '*Enter Card Number',
                                 prefixIcon: Icon(Icons.numbers),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                 filled: true,
@@ -291,4 +293,5 @@ Future<Map<String, dynamic>?> showCardInputDialog({
       );
     },
   );
+
 }

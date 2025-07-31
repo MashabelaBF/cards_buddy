@@ -13,25 +13,30 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     void showEditCardDialog(BuildContext context, dynamic key, Map cardMap) async {
-      final card = CardModel.fromMap(cardMap);
-      final imageController = ImageController();
-      final result = await showCardInputDialog(
-        context: context,
-        title: 'Edit Card',
-        initialName: card.name,
-        initialCode: card.code,
-        initialImage: card.image != null && card.image!.isNotEmpty ? XFile(card.image!) : null,
-        isPickingImage: imageController.isPickingImage,
-        pickImage: imageController.pickImage,
-        cropImage: imageController.cropImage,
-      );
-      if (result != null) {
-        box.put(key, CardModel(
-          name: result['name'],
-          code: result['code'],
-          date: card.date,
-          image: result['image']).toMap());
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => SettingsScreen(box: box)));
+      try{
+        final card = CardModel.fromMap(cardMap);
+        final imageController = ImageController();
+        
+        final result = await showCardInputDialog(
+          context: context,
+          title: 'Edit Card',
+          initialName: card.name,
+          initialCode: card.code,
+          initialImage: card.image != null && card.image!.isNotEmpty ? XFile(card.image!) : null,
+          isPickingImage: imageController.isPickingImage,
+          pickImage: imageController.pickImage,
+          cropImage: imageController.cropImage,
+        );
+        if (result != null) {
+          box.put(key, CardModel(
+            name: result['name'],
+            code: result['code'],
+            date: card.date,
+            image: result['image']).toMap());
+          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => SettingsScreen(box: box)));
+        }
+      } catch (e) {
+        showErrorMessage(context, 'Error editing card: ${e.toString()}');
       }
     }
 
@@ -50,9 +55,14 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () {}, // No flip/close on settings
                   onDelete: () async {
                     final confirm = await showDeleteConfirmationDialog(context);
-                    if (confirm == true) {
-                      box.delete(key);
-                      (context as Element).markNeedsBuild();
+
+                    try {
+                      if (confirm == true) {
+                        box.delete(key);
+                        (context as Element).markNeedsBuild();
+                      }
+                    } catch (e) {
+                      showErrorMessage(context, 'Error deleting card: ${e.toString()}');
                     }
                   },
                   forceDeleteIcon: true,

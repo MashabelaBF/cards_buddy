@@ -20,7 +20,13 @@ class _HomeScreenState extends State<HomeScreen> {
   int? _openIndex;
   final ImageController imageController = ImageController();
 
+  /// Shows a dialog for adding a card.
+  /// The [scannedCode] is used to auto-fill the code field in the dialog.
+  /// The dialog is created with [showCardInputDialog].
+  /// The new card is added to the database with [box.add].
   void _showAddCardDialog(BuildContext context, {String? scannedCode}) async {
+    try {
+       // Show the add card dialog and wait for the result
     final result = await showCardInputDialog(
       context: context,
       title: 'Add Card',
@@ -31,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
       pickImage: imageController.pickImage,
       cropImage: imageController.cropImage,
     );
+    // If the result is not null, add the new card to the box
     if (result != null) {
       final card = CardModel(
         name: result['name'],
@@ -40,10 +47,15 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       box.add(card.toMap());
     }
+    } catch (e) {
+      showErrorMessage(context, 'Error adding card: ${e.toString()}');
+    }
+   
   }
 
   @override
   Widget build(BuildContext context) {
+    // Define the onPopInvoked function to handle the back button press
     return PopScope(
       canPop: _openIndex == null,
       onPopInvoked: (didPop) {
@@ -63,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 32,
                 height: 32,
               ),
-              SizedBox(width: 12),
+              SizedBox(width: 12),// Add a space between the logo and the title
               Text('Card Buddy', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold)),
             ],
           ),
@@ -97,11 +109,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       onDelete: () async {
                         final confirm = await showDeleteConfirmationDialog(context);
-                        if (confirm == true) {
-                          box.delete(key);
-                          setState(() {
-                            _openIndex = null;
-                          });
+
+                        try {
+                          if (confirm == true) {
+                            box.delete(key);
+                            setState(() {
+                              _openIndex = null;
+                            });
+                          }
+                        } catch (e) {
+                          showErrorMessage(context, 'Error deleting card: ${e.toString()}');
                         }
                       },
                     ),
@@ -124,11 +141,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     onDelete: () async {
                       final confirm = await showDeleteConfirmationDialog(context);
-                      if (confirm == true) {
-                        box.delete(key);
-                        setState(() {
-                          _openIndex = null;
-                        });
+
+                      try {
+                        if (confirm == true) {
+                          box.delete(key);
+                          setState(() {
+                            _openIndex = null;
+                          });
+                        }
+                      } catch (e) {
+                        showErrorMessage(context, 'Error deleting card: ${e.toString()}');
                       }
                     },
                   );
@@ -265,6 +287,7 @@ class FlippableCard extends StatelessWidget {
     final borderShadow = [
       BoxShadow(
         //color: Colors.grey.withOpacity(0.25),
+        //Color.fromARGB(64, 158, 158, 158)
         color: Colors.grey.withValues(blue: 0.1),
         blurRadius: 6,
         spreadRadius: 2,
